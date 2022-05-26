@@ -48,11 +48,8 @@ console.log('productMap', productMap);
 
 
 
-var filterContainer = document.getElementById('filter-container');
-//console.log('filter container', filterContainer)
+
 var selectDict = {};
-
-
 var getOnChange = (field) => {
     console.log('getting on change with field', field);
     return e => {
@@ -69,29 +66,29 @@ var getOnChange = (field) => {
 
             // Filter out options out of other lists
             //console.log('targeting OTHER select input', selectDict[subField]);
-            for(const option of selectDict[subField]) {
-                if(!option.value) continue;
-                //console.log(option);
+            for(const i in selectDict[subField]) {
+                const option = selectDict[subField].options[i];
+                if(!option || !option.value) continue;
 
                 //look up the "field" being filtered by
-                if(allowedValues[subField].includes(option.value)) {
+                if(!allowedValues[subField].includes(option.value)) {
                     console.log(`hiding ${option.value}`)
-                    option.setAttribute("hidden", "hidden");
+                    selectDict[subField].remove(i)
+                    //option.setAttribute("hidden", "hidden");
                     //option.disable = true;
                 }
-
-                // if (option.value)
-                //option.hidden = true
             }
         }
-        //console.log(`${field} filter was clicked with: ${e.target.value}`);
     }
 }
 
+var optionsDict = {};
 for(const field of productFields) {
     selectDict[field] = document.getElementById("select-"+field);
     //console.log('found select select input', selectDict[field]);
     selectDict[field].onchange = getOnChange(field);
     // Iterate over options and add event listener
+    optionsDict[field] = selectDict[field].options;
 }
+console.log("optionsDict", optionsDict)
 
