@@ -1,21 +1,29 @@
 // Iterate over products
 var productEls = document.getElementsByClassName("product-item");
-var productFields = ['style', 'finish', 'species'];
+var productFields = ['style', 'finish', 'material'];
 
 // Build Product List
 var productList = [];
 for (var i = 0; i < productEls.length; i++) {
     var product = {};
     for(const field of productFields) {
-        product[field] = productEls[i].getElementsByClassName("product-"+field)[0].innerHTML;
+        const value = productEls[i].getElementsByClassName("product-"+field)[0].innerHTML;
+        // check if product has the field
+        if(!value || !value.trim()) {
+            continue;
+        }
+        product[field] = value
+       
     }
     productList.push(product);
 }
+console.log('product list', productList);
  
 // Build Product Map
 var productMap = {};
 for(const product of productList) {
     for(const field of productFields) {
+        if(!product[field]) continue;
 
         // Create new field if necessary
         if(!productMap[field]) {
@@ -43,52 +51,46 @@ for(const product of productList) {
         }
     }
 }
-console.log('productMap', productMap);
 
-
-
-
+function capitalize(string) {
+    return string.charAt(0).toUpperCase() + string.slice(1);
+}
 
 var selectDict = {};
 var getOnChange = (field) => {
-    console.log('getting on change with field', field);
     return e => {
         if(!e.target.value) return;
 
         // What other fields are allowed
-        //console.log(`looking up allowed values for: ${e.target.value}  in: ${field}`)
         var allowedValues = productMap[field][e.target.value];
-        //console.log('allowed values', allowedValues);
-
-        // When a style, finish or species is clicked, target the other select inputs
+        
+        // When a style, finish or material is clicked, target the other select inputs
         for(const subField of productFields) {
             if(subField === field) continue;
 
-            // Filter out options out of other lists
-            //console.log('targeting OTHER select input', selectDict[subField]);
-            for(const i in selectDict[subField]) {
-                const option = selectDict[subField].options[i];
-                if(!option || !option.value) continue;
-
-                //look up the "field" being filtered by
-                if(!allowedValues[subField].includes(option.value)) {
-                    console.log(`hiding ${option.value}`)
-                    selectDict[subField].remove(i)
-                    //option.setAttribute("hidden", "hidden");
-                    //option.disable = true;
-                }
+            while(selectDict[subField].options.length) {
+                selectDict[subField].options.remove(0)
             }
+            selectDict[subField].options.add(new Option("Select "+capitalize(subField)+"...", ""));
+            allowedValues[subField].map((v) => selectDict[subField].options.add(new Option(v, v)));
         }
     }
 }
 
+
 var optionsDict = {};
 for(const field of productFields) {
     selectDict[field] = document.getElementById("select-"+field);
-    //console.log('found select select input', selectDict[field]);
+
+    const collection = document.getElementById(field+"-collection")
+                                .querySelectorAll("[collection-item="+field+"]")
+
+    for(const option of collection) {
+        selectDict[field].options.add(new Option(option.innerText, option.innerText));
+    }
+
     selectDict[field].onchange = getOnChange(field);
-    // Iterate over options and add event listener
     optionsDict[field] = selectDict[field].options;
 }
-console.log("optionsDict", optionsDict)
+
 
