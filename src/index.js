@@ -1,14 +1,13 @@
 (function(document) {
-        // Iterate over products
-        var productEls = document.getElementsByClassName("product-item");
-        var productFields = ['style', 'finish', 'material'];
 
-        // Build Product List
-        var productList = [];
-        for (var i = 0; i < productEls.length; i++) {
-            var product = {};
-            for(const field of productFields) {
-                const value = productEls[i].getElementsByClassName("product-"+field)[0].innerHTML;
+    const PRODUCT_FIELDS = ['style', 'finish', 'material'];
+      
+    let buildProductList = (elements) => {
+        let productList = [];
+        for (var i = 0; i < elements.length; i++) {
+            let product = {};
+            for(const field of PRODUCT_FIELDS) {
+                const value = elements[i].getElementsByClassName("product-"+field)[0].innerHTML;
                 // check if product has the field
                 if(!value || !value.trim()) {
                     continue;
@@ -17,12 +16,14 @@
             
             }
             productList.push(product);
-        }
-        
-        // Build Product Map
+        } 
+        return productList;
+    }
+
+    let buildProductMap = (products) => {
         var productMap = {};
-        for(const product of productList) {
-            for(const field of productFields) {
+        for(const product of products) {
+            for(const field of PRODUCT_FIELDS) {
                 if(!product[field]) continue;
 
                 // Create new field if necessary
@@ -36,7 +37,7 @@
                     productMap[field][fieldValue] = {};
                 }
 
-                for(const subField of productFields) {
+                for(const subField of PRODUCT_FIELDS) {
                     if(subField === field) continue;
 
 
@@ -51,46 +52,102 @@
                 }
             }
         }
+        return productMap;
+    }
 
-        function capitalize(string) {
-            return string.charAt(0).toUpperCase() + string.slice(1);
-        }
+    let getSelectEls = () => {
+        let selectEls = {}
+        return PRODUCT_FIELDS.reduce((obj, field) => {
+            return {
+                ...obj,
+                [field]: document.getElementById("select-"+field),
+            };
+        }, selectEls);
+    }
 
-        var selectDict = {};
-        var getOnChange = (field) => {
-            return e => {
-                if(!e.target.value) return;
+    let capitalize = (v) => v.charAt(0).toUpperCase() + v.slice(1);
 
-                // What other fields are allowed
-                var allowedValues = productMap[field][e.target.value];
-                
-                // When a style, finish or material is clicked, target the other select inputs
-                for(const subField of productFields) {
-                    if(subField === field) continue;
+    let getOnChange = (field) => {
+        return e => {
+            if(!e.target.value) return;
 
-                    while(selectDict[subField].options.length) {
-                        selectDict[subField].options.remove(0)
+            // What other fields are allowed
+            var allowedValues = productMap[field][e.target.value];
+            
+            // When a style, finish or material is clicked, target the other select inputs
+            for(const subField of PRODUCT_FIELDS) {
+                if(subField === field) continue;
+
+                // Remove all current options. Save which was selected.
+                // Iterate backwards because the first element will always be the one selected 
+                // and will pass off the selected status to the next element when deleted
+                var selectedValue;
+                let foundSelected = false;
+                let i = selectEls[subField].options.length;
+                while(i--) {
+                    if(!foundSelected && selectEls[subField].options[i].selected) {
+                        selectedValue = selectEls[subField].options[i].value;
+                        foundSelected = true;
                     }
-                    selectDict[subField].options.add(new Option("Select "+capitalize(subField)+"...", ""));
-                    allowedValues[subField].map((v) => selectDict[subField].options.add(new Option(v, v)));
+                    selectEls[subField].options.remove(i)
                 }
+
+                // If nothing in select was selected, add back the "Select <field>..." Option
+                if(selectedValue) {
+                    selectEls[subField].options.add(new Option(selectedValue, selectedValue, true, true));
+                    allowedValues[subField] = allowedValues[subField].filter((v) => v > selectedValue);
+                } else {
+                    selectEls[subField].options.add(new Option("Select "+capitalize(subField)+"...", ""));
+                }
+                
+                allowedValues[subField].map((v) => {
+                    selectEls[subField].options.add(
+                        new Option(v, v, v === selectedValue, v === selectedValue)
+                    )
+                });
             }
         }
+    }
 
-
-        var optionsDict = {};
-        for(const field of productFields) {
-            selectDict[field] = document.getElementById("select-"+field);
-
+    let buildSelectOptions = (selectEls) => {
+        for(const field of PRODUCT_FIELDS) {
+            selectEls[field] = document.getElementById("select-"+field);
             const collection = document.getElementById(field+"-collection")
                                         .querySelectorAll("[collection-item="+field+"]")
 
-            for(const option of collection) {
-                selectDict[field].options.add(new Option(option.innerText, option.innerText));
+            while(selectEls[field].options.length) {
+                selectEls[field].options.remove(0)
             }
-
-            selectDict[field].onchange = getOnChange(field);
-            optionsDict[field] = selectDict[field].options;
+            selectEls[field].options.add(new Option("Select "+capitalize(field)+"...", ""));
+            for(const option of collection) {
+                selectEls[field].options.add(new Option(option.innerText, option.innerText));
+            }
+            selectEls[field].onchange = getOnChange(field);
         }
+    }
+
+    let initResetButton = (selectEls) => {
+        // on reset button press, reset the filters
+        const resetButton = document.getElementById('reset-button');
+        resetButton.onclick = (e) => {
+            buildSelectOptions(selectEls);
+        }
+    }
+
+
+    
+    // Get all the product elements
+    let productEls = document.getElementsByClassName("product-item");
+    let productList = buildProductList(productEls);
+
+    // Build a map that indicates which fields are compatible with others
+    let productMap = buildProductMap(productList);
+    let selectEls = getSelectEls();
+
+    
+    // Add the initial select options
+    buildSelectOptions(selectEls);
+
+    initResetButton(selectEls)
 
 })(document);
