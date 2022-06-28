@@ -1,24 +1,62 @@
 (function(document) {
 
     const PRODUCT_FIELDS = ['style', 'finish', 'material'];
-      
-    let buildProductList = (elements) => {
-        let productList = [];
-        for (var i = 0; i < elements.length; i++) {
-            let product = {};
-            for(const field of PRODUCT_FIELDS) {
-                const value = elements[i].getElementsByClassName("product-"+field)[0].innerHTML;
-                // check if product has the field
-                if(!value || !value.trim()) {
-                    continue;
-                }
-                product[field] = value
-            
+    
+
+    let addColours = (collection) => {
+        const colourCollection = document.getElementById("colour-collection");
+        [...colourCollection.children].forEach(node => collection.appendChild(node));
+        colourCollection.parentNode.remove();
+        colourCollection.remove();
+    };
+
+    let sortProducts = (collection) => {
+        [...collection.children]
+        .sort((a, b) => {
+    
+            // compare by style title
+            let styleA = a.querySelector(".product-style");
+            let styleB = b.querySelector(".product-style");
+    
+            // If both elements have style
+            if(styleA.innerText && styleB.innerText) 
+                return styleA.innerText.localeCompare(styleB.innerText);
+            // If A has style and B does not
+            else if(styleA.innerText && !styleB.innerText)
+                return -1;
+            // Vice Versa
+            else if(styleB.innerText && !styleA.innerText)
+                return 1;
+            // compare by finish 
+            else {
+                let finishA = a.querySelector(".product-finish");
+                let finishB = b.querySelector(".product-finish");
+                return finishA.innerText.localeCompare(finishB.innerText);
             }
-            productList.push(product);
-        } 
-        return productList;
+        })
+        .forEach(node => collection.appendChild(node))
     }
+      
+    
+    let buildProductList = () => {
+        const PRODUCT_FIELDS = ['style', 'finish', 'material'];
+        const productEls = document.getElementsByClassName("product-item");
+        return Array.from(productEls).map(el => 
+            PRODUCT_FIELDS.reduce((o, v) => {
+                const fieldValue = el.getElementsByClassName("product-"+v)[0].innerHTML;
+            
+                // check if product has the field
+                if(!fieldValue || !fieldValue.trim())
+                    return o;
+ 
+                return {
+                    ...o,
+                    [v]: fieldValue
+                };
+            }, {})
+        );
+    }    
+        
 
     let buildProductMap = (products) => {
         var productMap = {};
@@ -67,7 +105,7 @@
 
     let capitalize = (v) => v.charAt(0).toUpperCase() + v.slice(1);
 
-    let getOnChange = (field) => {
+    let getOnChange = (field, productMap) => {
         return e => {
             if(!e.target.value) return;
 
@@ -122,32 +160,70 @@
             for(const option of collection) {
                 selectEls[field].options.add(new Option(option.innerText, option.innerText));
             }
-            selectEls[field].onchange = getOnChange(field);
         }
     }
 
-    let initResetButton = (selectEls) => {
+    let attachSelectOnChange = (selectEls, productMap) => {
+        for(const field of PRODUCT_FIELDS) {
+            selectEls[field].onchange = getOnChange(field, productMap);
+        }
+    }
+
+    let initResetButton = (selectEls, productCollection) => {
         // on reset button press, reset the filters
         const resetButton = document.getElementById('reset-button');
         resetButton.onclick = (e) => {
             buildSelectOptions(selectEls);
+            sortProducts(productCollection);
         }
     }
 
 
+
+
+    // NEW PROCESS
+    const productCollection = document.getElementById("product-collection");
     
+    // Build Product List
+    const productList = buildProductList();
+    console.log("productLust", productList);
+return;
+    // Sort List
+
+    // Render List
+
+    // Build Compatibility Map
+
+    // Build Relevant Select Options
+
+    // Render Select Inputs
+
+    // Init Reset Button
+
+
+
+
+
+
+    
+    // Combine Doors and Colours
+
+    
+    // Attach data attributes for style, finish, material
+    //colour-collection
+
+    sortProducts(productCollection);
+
     // Get all the product elements
-    let productEls = document.getElementsByClassName("product-item");
-    let productList = buildProductList(productEls);
+
 
     // Build a map that indicates which fields are compatible with others
-    let productMap = buildProductMap(productList);
-    let selectEls = getSelectEls();
+    const productMap = buildProductMap(productList);
 
-    
-    // Add the initial select options
+    const selectEls = getSelectEls();
+    initResetButton(selectEls, productCollection);
+    attachSelectOnChange(selectEls, productMap);
     buildSelectOptions(selectEls);
 
-    initResetButton(selectEls)
 
 })(document);
