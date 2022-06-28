@@ -1,43 +1,8 @@
 (function(document) {
 
     const PRODUCT_FIELDS = ['style', 'finish', 'material'];
-    
+    const productCollection = document.getElementById("product-collection");
 
-    let addColours = (collection) => {
-        const colourCollection = document.getElementById("colour-collection");
-        [...colourCollection.children].forEach(node => collection.appendChild(node));
-        colourCollection.parentNode.remove();
-        colourCollection.remove();
-    };
-
-    let sortProducts = (collection) => {
-        [...collection.children]
-        .sort((a, b) => {
-    
-            // compare by style title
-            let styleA = a.querySelector(".product-style");
-            let styleB = b.querySelector(".product-style");
-    
-            // If both elements have style
-            if(styleA.innerText && styleB.innerText) 
-                return styleA.innerText.localeCompare(styleB.innerText);
-            // If A has style and B does not
-            else if(styleA.innerText && !styleB.innerText)
-                return -1;
-            // Vice Versa
-            else if(styleB.innerText && !styleA.innerText)
-                return 1;
-            // compare by finish 
-            else {
-                let finishA = a.querySelector(".product-finish");
-                let finishB = b.querySelector(".product-finish");
-                return finishA.innerText.localeCompare(finishB.innerText);
-            }
-        })
-        .forEach(node => collection.appendChild(node))
-    }
-      
-    
     let buildProductList = () => {
         const PRODUCT_FIELDS = ['style', 'finish', 'material'];
         const productEls = document.getElementsByClassName("product-item");
@@ -56,6 +21,61 @@
             }, {})
         );
     }    
+    
+    let sortProducts = (productList) =>
+        [...productList]
+        .sort((a, b) => {
+
+            // First, compare by style
+            // If both elements have style
+            if(a.style && b.style) 
+                return a.style.localeCompare(b.style);
+            // If A has style and B does not
+            else if(a.style && !b.style)
+                return -1;
+            // Vice Versa
+            else if(b.style && !a.style)
+                return 1;
+            // compare by finish 
+            else {
+                return a.finish.localeCompare(b.finish);
+            }
+        });
+      
+
+        // Build Product List
+        const productList = buildProductList();
+        console.log("productList", productList);
+    
+        // Sort List
+        productList = sortProducts(productList);
+        console.log("sorted productList", productList);
+
+    // Render List
+
+    // Build Compatibility Map
+
+    // Build Relevant Select Options
+
+    // Render Select Inputs
+
+    // Init Reset Button
+
+
+
+
+    
+    
+    let addColours = (collection) => {
+        const colourCollection = document.getElementById("colour-collection");
+        [...colourCollection.children].forEach(node => collection.appendChild(node));
+        colourCollection.parentNode.remove();
+        colourCollection.remove();
+    };
+
+    
+    
+    
         
 
     let buildProductMap = (products) => {
@@ -182,23 +202,8 @@
 
 
     // NEW PROCESS
-    const productCollection = document.getElementById("product-collection");
     
-    // Build Product List
-    const productList = buildProductList();
-    console.log("productLust", productList);
-return;
-    // Sort List
 
-    // Render List
-
-    // Build Compatibility Map
-
-    // Build Relevant Select Options
-
-    // Render Select Inputs
-
-    // Init Reset Button
 
 
 
