@@ -1,13 +1,12 @@
 (function(document) {
 
     const PRODUCT_FIELDS = ['style', 'finish', 'material'];
-    const productCollection = document.getElementById("product-collection");
+    const PRODUCT_ID_KEY = 'productId';
 
-    let buildProductList = () => {
-        const PRODUCT_FIELDS = ['style', 'finish', 'material'];
-        const productEls = document.getElementsByClassName("product-item");
-        return Array.from(productEls).map(el => 
-            PRODUCT_FIELDS.reduce((o, v) => {
+    let buildProductList = (elements) => 
+        [...elements].map((el, i) => {
+            el.setAttribute(PRODUCT_ID_KEY, i);
+            return PRODUCT_FIELDS.reduce((o, v) => {
                 const fieldValue = el.getElementsByClassName("product-"+v)[0].innerHTML;
             
                 // check if product has the field
@@ -16,11 +15,12 @@
  
                 return {
                     ...o,
+                    id: i,
                     [v]: fieldValue
                 };
-            }, {})
-        );
-    }    
+            }, { htmlElement: el })
+        });
+        
     
     let sortProducts = (productList) =>
         [...productList]
@@ -41,194 +41,154 @@
                 return a.finish.localeCompare(b.finish);
             }
         });
-      
 
-        // Build Product List
-        const productList = buildProductList();
-        console.log("productList", productList);
+        let buildCompatibilityMap = (products) =>
+            products.reduce((obj, v) => {
+                PRODUCT_FIELDS.forEach(field => {
+                    if(!v[field]) return;
     
-        // Sort List
-        productList = sortProducts(productList);
-        console.log("sorted productList", productList);
-
-    // Render List
-
-    // Build Compatibility Map
-
-    // Build Relevant Select Options
-
-    // Render Select Inputs
-
-    // Init Reset Button
-
-
-
-
-    
-    
-    let addColours = (collection) => {
-        const colourCollection = document.getElementById("colour-collection");
-        [...colourCollection.children].forEach(node => collection.appendChild(node));
-        colourCollection.parentNode.remove();
-        colourCollection.remove();
-    };
-
-    
-    
-    
-        
-
-    let buildProductMap = (products) => {
-        var productMap = {};
-        for(const product of products) {
-            for(const field of PRODUCT_FIELDS) {
-                if(!product[field]) continue;
-
-                // Create new field if necessary
-                if(!productMap[field]) {
-                    productMap[field] = {};
-                }
-
-                // Add new entry to field map
-                var fieldValue = product[field];
-                if(!productMap[field][fieldValue]) {
-                    productMap[field][fieldValue] = {};
-                }
-
-                for(const subField of PRODUCT_FIELDS) {
-                    if(subField === field) continue;
-
-
-                    if(!productMap[field][fieldValue][subField]) {
-                        productMap[field][fieldValue][subField] = [];
+                    // Create new field if necessary
+                    if(!obj[field]) {
+                        obj[field] = {};
                     }
+    
+                    // Add new entry to field map
+                    var fieldValue = v[field];
+                    if(!obj[field][fieldValue]) {
+                        obj[field][fieldValue] = {};
+                    }
+    
+                    for(const subField of PRODUCT_FIELDS) {
+                        if(subField === field) continue;
+    
+    
+                        if(!obj[field][fieldValue][subField]) {
+                            obj[field][fieldValue][subField] = [];
+                        }
+    
+                        var productValue = v[subField];
+                        if(!obj[field][fieldValue][subField].includes(productValue)) {
+                            obj[field][fieldValue][subField].push(productValue)
+                        }  
+                    }
+                })
 
-                    var productValue = product[subField];
-                    if(!productMap[field][fieldValue][subField].includes(productValue)) {
-                        productMap[field][fieldValue][subField].push(productValue)
-                    }  
-                }
-            }
-        }
-        return productMap;
-    }
+                return obj;
+            }, {});
+        
+        let getSelectElMap = () =>
+            PRODUCT_FIELDS.reduce((obj, field) => {
+                return {
+                    ...obj,
+                    [field]: document.getElementById("select-"+field),
+                };
+            }, {});
 
-    let getSelectEls = () => {
-        let selectEls = {}
-        return PRODUCT_FIELDS.reduce((obj, field) => {
-            return {
-                ...obj,
-                [field]: document.getElementById("select-"+field),
-            };
-        }, selectEls);
-    }
+        let capitalize = (v) => v.charAt(0).toUpperCase() + v.slice(1);
 
-    let capitalize = (v) => v.charAt(0).toUpperCase() + v.slice(1);
-
-    let getOnChange = (field, productMap) => {
-        return e => {
+        let getOnChange = (field, selectElMap, compatibilityMap) => e => {
             if(!e.target.value) return;
 
             // What other fields are allowed
-            var allowedValues = productMap[field][e.target.value];
+            var allowedValues = compatibilityMap[field][e.target.value];
             
             // When a style, finish or material is clicked, target the other select inputs
-            for(const subField of PRODUCT_FIELDS) {
-                if(subField === field) continue;
+            PRODUCT_FIELDS.forEach(subField => {
+                if(subField === field) return;
 
                 // Remove all current options. Save which was selected.
                 // Iterate backwards because the first element will always be the one selected 
                 // and will pass off the selected status to the next element when deleted
                 var selectedValue;
                 let foundSelected = false;
-                let i = selectEls[subField].options.length;
+                let i = selectElMap[subField].options.length;
                 while(i--) {
-                    if(!foundSelected && selectEls[subField].options[i].selected) {
-                        selectedValue = selectEls[subField].options[i].value;
+                    if(!foundSelected && selectElMap[subField].options[i].selected) {
+                        selectedValue = selectElMap[subField].options[i].value;
                         foundSelected = true;
                     }
-                    selectEls[subField].options.remove(i)
+                    selectElMap[subField].options.remove(i)
                 }
 
                 // If nothing in select was selected, add back the "Select <field>..." Option
                 if(selectedValue) {
-                    selectEls[subField].options.add(new Option(selectedValue, selectedValue, true, true));
+                    selectElMap[subField].options.add(new Option(selectedValue, selectedValue, true, true));
                     allowedValues[subField] = allowedValues[subField].filter((v) => v > selectedValue);
                 } else {
-                    selectEls[subField].options.add(new Option("Select "+capitalize(subField)+"...", ""));
+                    selectElMap[subField].options.add(new Option("Select "+capitalize(subField)+"...", ""));
                 }
                 
-                allowedValues[subField].map((v) => {
-                    selectEls[subField].options.add(
-                        new Option(v, v, v === selectedValue, v === selectedValue)
-                    )
-                });
-            }
+                selectElMap[subField].options = allowedValues[subField].map((v) => 
+                        new Option(v, v, v === selectedValue, v === selectedValue));
+            })
         }
-    }
-
-    let buildSelectOptions = (selectEls) => {
-        for(const field of PRODUCT_FIELDS) {
-            selectEls[field] = document.getElementById("select-"+field);
-            const collection = document.getElementById(field+"-collection")
-                                        .querySelectorAll("[collection-item="+field+"]")
-
-            while(selectEls[field].options.length) {
-                selectEls[field].options.remove(0)
-            }
-            selectEls[field].options.add(new Option("Select "+capitalize(field)+"...", ""));
-            for(const option of collection) {
-                selectEls[field].options.add(new Option(option.innerText, option.innerText));
-            }
-        }
-    }
-
-    let attachSelectOnChange = (selectEls, productMap) => {
-        for(const field of PRODUCT_FIELDS) {
-            selectEls[field].onchange = getOnChange(field, productMap);
-        }
-    }
-
-    let initResetButton = (selectEls, productCollection) => {
-        // on reset button press, reset the filters
-        const resetButton = document.getElementById('reset-button');
-        resetButton.onclick = (e) => {
-            buildSelectOptions(selectEls);
-            sortProducts(productCollection);
-        }
-    }
-
-
-
-
-    // NEW PROCESS
     
+        let attachSelectOnChange = (selectElMap, compatibilityMap) => {
+            PRODUCT_FIELDS.forEach(field => {
+                selectElMap[field].onchange = getOnChange(field, selectElMap, compatibilityMap )
+            });
+        }
+
+
+        let getSelectData = () => 
+            PRODUCT_FIELDS.reduce((obj, field) => {
+                const fieldOptions = document.getElementById(field+"-collection")
+                                             .querySelectorAll("[collection-item="+field+"]");
+                return {
+                    ...obj,
+                    [field]: [...fieldOptions].map(opt => opt.innerText)      
+                }               
+            }, {})
 
 
 
+        let setSelectOptions = (selectElMap, selectData) => {
+            PRODUCT_FIELDS.forEach(field => {
+                while(selectElMap[field].options.length) {
+                    selectElMap[field].options.remove(0)
+                }
+
+                selectElMap[field].options.add(new Option("Select "+capitalize(field)+"...", ""));
 
 
+                [...selectData[field]].forEach(v => {
+                    selectElMap[field].options.add(new Option(v, v));
+                })
+            })
+        }
 
-
+        let initResetButton = (selectElMap) => {
+            // on reset button press, reset the filters
+            const resetButton = document.getElementById('reset-button');
+            resetButton.onclick = () => buildSelectOptions(selectElMap);
+        }
     
-    // Combine Doors and Colours
+            
 
+        // Build Product List
+        const productEls = document.getElementsByClassName("product-item");
+        let productList = buildProductList(productEls);
+        console.log("productList", productList);
     
-    // Attach data attributes for style, finish, material
-    //colour-collection
+        // Sort List
+        productList = sortProducts(productList);
+        let sortedProductEls = productList.map(v => v.htmlElement);
 
-    sortProducts(productCollection);
+        // Render List
+        const productCollection = document.getElementById("product-collection");
+        productCollection.replaceChildren(...sortedProductEls);
 
-    // Get all the product elements
+        // Build Compatibility Map
+        const compatibilityMap = buildCompatibilityMap(productList);
+        console.log(compatibilityMap);
 
-
-    // Build a map that indicates which fields are compatible with others
-    const productMap = buildProductMap(productList);
-
-    const selectEls = getSelectEls();
-    initResetButton(selectEls, productCollection);
-    attachSelectOnChange(selectEls, productMap);
-    buildSelectOptions(selectEls);
-
-
+        // Build Select Inputs
+        const selectElMap = getSelectElMap();
+        attachSelectOnChange(selectElMap, compatibilityMap);
+        const selectData = getSelectData();
+        setSelectOptions(selectElMap, selectData);
+        
+        // Init Reset Button
+        initResetButton(selectElMap);
+        
 })(document);
