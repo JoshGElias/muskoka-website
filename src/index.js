@@ -1,4 +1,4 @@
-(function(document) {
+//(function(document) {
 
     const PRODUCT_FIELDS = ['style', 'finish', 'material'];
     const PRODUCT_ID_KEY = 'productId';
@@ -91,11 +91,12 @@
 
             // What other fields are allowed
             var allowedValues = compatibilityMap[field][e.target.value];
+            console.log("allowed values: ", allowedValues);
             
             // When a style, finish or material is clicked, target the other select inputs
             PRODUCT_FIELDS.forEach(subField => {
                 if(subField === field) return;
-
+                console.log("looking at subfield: ", subField);
                 // Remove all current options. Save which was selected.
                 // Iterate backwards because the first element will always be the one selected 
                 // and will pass off the selected status to the next element when deleted
@@ -103,23 +104,30 @@
                 let foundSelected = false;
                 let i = selectElMap[subField].options.length;
                 while(i--) {
-                    if(!foundSelected && selectElMap[subField].options[i].selected) {
+
+                    if(!foundSelected && selectElMap[subField].options[i].selected) {  
                         selectedValue = selectElMap[subField].options[i].value;
+                        console.log("found selected option: ", selectedValue);
                         foundSelected = true;
                     }
+                    console.log("removing option: ", selectElMap[subField].options[i])
                     selectElMap[subField].options.remove(i)
                 }
 
                 // If nothing in select was selected, add back the "Select <field>..." Option
                 if(selectedValue) {
+                    console.log("re-adding selected option");
                     selectElMap[subField].options.add(new Option(selectedValue, selectedValue, true, true));
                     allowedValues[subField] = allowedValues[subField].filter((v) => v > selectedValue);
                 } else {
+                    console.log("Addingg 'Select...' Option");
                     selectElMap[subField].options.add(new Option("Select "+capitalize(subField)+"...", ""));
                 }
                 
-                selectElMap[subField].options = allowedValues[subField].map((v) => 
-                        new Option(v, v, v === selectedValue, v === selectedValue));
+
+                allowedValues[subField].forEach(v => 
+                    selectElMap[subField].add(
+                        new Option(v, v, v === selectedValue, v === selectedValue)))           
             })
         }
     
@@ -168,7 +176,7 @@
         // Build Product List
         const productEls = document.getElementsByClassName("product-item");
         let productList = buildProductList(productEls);
-        console.log("productList", productList);
+        //console.log("productList", productList);
     
         // Sort List
         productList = sortProducts(productList);
@@ -191,4 +199,4 @@
         // Init Reset Button
         initResetButton(selectElMap);
         
-})(document);
+//})(document);
