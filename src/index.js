@@ -1,4 +1,4 @@
-//(function(document) {
+(function(document) {
 
     const PRODUCT_FIELDS = ['style', 'finish', 'material'];
     const PRODUCT_ID_KEY = 'productId';
@@ -41,6 +41,10 @@
                 return a.finish.localeCompare(b.finish);
             }
         });
+
+        let renderProducts = (collection, productEls) => {
+            collection.replaceChildren(...productEls);
+        }
 
         let buildCompatibilityMap = (products) =>
             products.reduce((obj, v) => {
@@ -86,54 +90,70 @@
 
         let capitalize = (v) => v.charAt(0).toUpperCase() + v.slice(1);
 
-        let getOnChange = (field, selectElMap, compatibilityMap) => e => {
+        let getOnChange = (field, selectElMap, compatibilityMap, productList) => e => {
             if(!e.target.value) return;
 
             // What other fields are allowed
             var allowedValues = compatibilityMap[field][e.target.value];
-            console.log("allowed values: ", allowedValues);
+
+            let selectedMap = { [field]: e.target.value };
             
             // When a style, finish or material is clicked, target the other select inputs
             PRODUCT_FIELDS.forEach(subField => {
                 if(subField === field) return;
-                console.log("looking at subfield: ", subField);
+
                 // Remove all current options. Save which was selected.
                 // Iterate backwards because the first element will always be the one selected 
                 // and will pass off the selected status to the next element when deleted
-                var selectedValue;
-                let foundSelected = false;
                 let i = selectElMap[subField].options.length;
                 while(i--) {
 
-                    if(!foundSelected && selectElMap[subField].options[i].selected) {  
-                        selectedValue = selectElMap[subField].options[i].value;
-                        console.log("found selected option: ", selectedValue);
-                        foundSelected = true;
+                    if(!selectedMap[subField] && selectElMap[subField].options[i].selected) {  
+                        selectedMap[subField] = selectElMap[subField].options[i].value;
                     }
-                    console.log("removing option: ", selectElMap[subField].options[i])
                     selectElMap[subField].options.remove(i)
                 }
 
                 // If nothing in select was selected, add back the "Select <field>..." Option
-                if(selectedValue) {
-                    console.log("re-adding selected option");
-                    selectElMap[subField].options.add(new Option(selectedValue, selectedValue, true, true));
-                    allowedValues[subField] = allowedValues[subField].filter((v) => v > selectedValue);
+                if(selectedMap[subField]) {
+                    selectElMap[subField].options.add(new Option(selectedMap[subField], selectedMap[subField], true, true));
+                    allowedValues[subField] = allowedValues[subField].filter((v) => v > selectedMap[subField]);
                 } else {
-                    console.log("Addingg 'Select...' Option");
                     selectElMap[subField].options.add(new Option("Select "+capitalize(subField)+"...", ""));
                 }
                 
-
+                // Add all the allowed options
                 allowedValues[subField].forEach(v => 
                     selectElMap[subField].add(
-                        new Option(v, v, v === selectedValue, v === selectedValue)))           
+                        new Option(v, v, v === selectedMap[subField], v === selectedMap[subField]))) 
+                        
             })
+
+            // Filter and Rerender Products
+            let filteredProducts = productList.filter(product => {
+                var visibilityMap = {}; // I love maps!
+                PRODUCT_FIELDS.forEach(f => {
+                    if(!selectedMap[f]) 
+                        return;
+                        
+                    visibilityMap[f] = product[f] === selectedMap[f]                 
+                });
+
+                for(const field in visibilityMap) {
+                    if(!visibilityMap[field]) {
+                        return false
+                    }
+                }
+                
+                return true;
+            })
+            .map(v => v.htmlElement);
+            renderProducts(productCollection, filteredProducts);
         }
     
-        let attachSelectOnChange = (selectElMap, compatibilityMap) => {
+        let attachSelectOnChange = (selectElMap, compatibilityMap, productList) => {
             PRODUCT_FIELDS.forEach(field => {
-                selectElMap[field].onchange = getOnChange(field, selectElMap, compatibilityMap )
+                selectElMap[field].onchange = getOnChange(field, selectElMap, compatibilityMap, productList )
             });
         }
 
@@ -147,8 +167,6 @@
                     [field]: [...fieldOptions].map(opt => opt.innerText)      
                 }               
             }, {})
-
-
 
         let setSelectOptions = (selectElMap, selectData) => {
             PRODUCT_FIELDS.forEach(field => {
@@ -165,38 +183,40 @@
             })
         }
 
-        let initResetButton = (selectElMap) => {
+        let initResetButton = (productCollection, productEls, selectElMap, selectData) => {
             // on reset button press, reset the filters
             const resetButton = document.getElementById('reset-button');
-            resetButton.onclick = () => buildSelectOptions(selectElMap);
+            resetButton.onclick = () => {
+                renderProducts(productCollection, productEls);
+                setSelectOptions(selectElMap, selectData);
+            }
         }
-    
-            
+           
 
         // Build Product List
         const productEls = document.getElementsByClassName("product-item");
-        let productList = buildProductList(productEls);
-        //console.log("productList", productList);
+        let productList = buildProductList(productEls);;
     
         // Sort List
         productList = sortProducts(productList);
-        let sortedProductEls = productList.map(v => v.htmlElement);
+
+        const sortedProductEls = productList.map(v => v.htmlElement);
+        const visibleProductEls = [...sortedProductEls];
 
         // Render List
         const productCollection = document.getElementById("product-collection");
-        productCollection.replaceChildren(...sortedProductEls);
+        renderProducts(productCollection, visibleProductEls)
 
         // Build Compatibility Map
         const compatibilityMap = buildCompatibilityMap(productList);
-        console.log(compatibilityMap);
 
         // Build Select Inputs
         const selectElMap = getSelectElMap();
-        attachSelectOnChange(selectElMap, compatibilityMap);
+        attachSelectOnChange(selectElMap, compatibilityMap, productList);
         const selectData = getSelectData();
         setSelectOptions(selectElMap, selectData);
         
         // Init Reset Button
-        initResetButton(selectElMap);
+        initResetButton(productCollection, sortedProductEls, selectElMap, selectData);
         
-//})(document);
+})(document);
