@@ -1,0 +1,10 @@
+.product-item {
+	transition: all;
+    transition-duration: 0.3s;
+    transition-timing-function: ease-in;
+    scale: 1;
+}
+
+.product-item:hover {
+    scale: 1.1;
+}
