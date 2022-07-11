@@ -1,6 +1,6 @@
-document.onload = function(document, window) {
+(function(document, window) {
     let navBackground;
-    const darkNavClass = "darkNav";
+    const darkNavClass = "darknav";
 
     let now = Date.now || function() {
         return new Date().getTime();
@@ -12,42 +12,42 @@ document.onload = function(document, window) {
         if (!options) options = {};
     
         var later = function() {
-        previous = options.leading === false ? 0 : now();
-        timeout = null;
-        result = func.apply(context, args);
-        if (!timeout) context = args = null;
+            previous = options.leading === false ? 0 : now();
+            timeout = null;
+            result = func.apply(context, args);
+            if (!timeout) context = args = null;
         };
     
         var throttled = function() {
-        var _now = now();
-        if (!previous && options.leading === false) previous = _now;
-        var remaining = wait - (_now - previous);
-        context = this;
-        args = arguments;
-        if (remaining <= 0 || remaining > wait) {
-            if (timeout) {
-            clearTimeout(timeout);
-            timeout = null;
+            var _now = now();
+            if (!previous && options.leading === false) previous = _now;
+            var remaining = wait - (_now - previous);
+            context = this;
+            args = arguments;
+            if (remaining <= 0 || remaining > wait) {
+                if (timeout) {
+                clearTimeout(timeout);
+                timeout = null;
+                }
+                previous = _now;
+                result = func.apply(context, args);
+                if (!timeout) context = args = null;
+            } else if (!timeout && options.trailing !== false) {
+                timeout = setTimeout(later, remaining);
             }
-            previous = _now;
-            result = func.apply(context, args);
-            if (!timeout) context = args = null;
-        } else if (!timeout && options.trailing !== false) {
-            timeout = setTimeout(later, remaining);
-        }
-        return result;
+            return result;
         };
     
         throttled.cancel = function() {
-        clearTimeout(timeout);
-        previous = 0;
-        timeout = context = args = null;
+            clearTimeout(timeout);
+            previous = 0;
+            timeout = context = args = null;
         };
     
         return throttled;
     }
 
-    let onScroll = throttle(() => {
+    let checkNavBackground = throttle(() => {
         if(!navBackground) {
            navBackground = document.getElementById("nav-background");
         }
@@ -60,5 +60,7 @@ document.onload = function(document, window) {
         }
     })
 
-    window.onscroll = onScroll;
-}(document, window);
+    checkNavBackground();
+    window.onscroll = checkNavBackground;
+
+})(document, window);
